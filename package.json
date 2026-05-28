@@ -1,0 +1,14 @@
+{
+  "name": "spinbattles-hiring-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SpinBattles hiring API for Vercel (deploy this folder as its own project)",
+  "dependencies": {
+    "cookie-session": "^2.1.0",
+    "dotenv": "^16.0.0",
+    "express": "^4.19.2",
+    "mongoose": "^8.3.4",
+    "serverless-http": "^3.2.0"
+  }
+}

@@ -1,8 +1,8 @@
 {
-  "$comment": "Vercel project spinbattlesserver: set Root Directory to server and use this file as vercel.json (or merge into project settings).",
-  "installCommand": "cd .. && npm install",
+  "installCommand": "npm install",
   "buildCommand": "",
-  "outputDirectory": "",
+  "outputDirectory": "public",
+  "framework": null,
   "functions": {
     "api/**/*.js": {
       "maxDuration": 60,
