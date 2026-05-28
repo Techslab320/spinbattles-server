@@ -3,7 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "SpinBattles hiring API for Vercel (deploy this folder as its own project)",
+  "description": "SpinBattles hiring API — standalone repo (Vercel, Railway, Render, etc.)",
+  "scripts": {
+    "start": "node dev-server.js",
+    "dev": "node dev-server.js",
+    "seed:admin": "node scripts/seed-admin.js"
+  },
   "dependencies": {
     "cookie-session": "^2.1.0",
     "dotenv": "^16.0.0",
