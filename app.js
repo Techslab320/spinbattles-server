@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto'
 import dotenv from 'dotenv'
 import { connectDb, dbUnavailableMessage, isDbConnected } from './lib/db.js'
 import { removeLegacyDbFile } from './lib/removeLegacyDb.js'
+import { createAdminToken, readBearerToken, verifyAdminToken } from './lib/adminToken.js'
 import { verifyPassword } from './lib/password.js'
 import {
   createApplication,
@@ -49,7 +50,7 @@ function resolveCorsOrigin(req, res) {
   }
 
   res.setHeader('Access-Control-Allow-Credentials', 'true')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS')
 }
 
@@ -135,10 +136,17 @@ export function createApp() {
     next()
   }
 
+  function getAdminEmailFromReq(req) {
+    if (req.session?.adminEmail) return req.session.adminEmail
+    return verifyAdminToken(readBearerToken(req))
+  }
+
   function requireAdmin(req, res, next) {
-    if (!req.session?.adminEmail) {
+    const email = getAdminEmailFromReq(req)
+    if (!email) {
       return res.status(401).json({ ok: false, message: 'Unauthorized' })
     }
+    req.adminEmail = email
     next()
   }
 
@@ -175,8 +183,9 @@ export function createApp() {
       if (!admin || !verifyPassword(String(password || ''), admin.passwordHash)) {
         return res.status(401).json({ ok: false, message: 'Invalid email or password' })
       }
-      req.session.adminEmail = admin.email
-      res.json({ ok: true, email: admin.email })
+      req.session = { adminEmail: admin.email }
+      const token = createAdminToken(admin.email)
+      res.json({ ok: true, email: admin.email, token })
     } catch (err) {
       console.error('[auth/login]', err)
       res.status(500).json({ ok: false, message: 'Login failed' })
@@ -189,10 +198,11 @@ export function createApp() {
   })
 
   app.get('/api/auth/me', (req, res) => {
-    if (!req.session?.adminEmail) {
+    const email = getAdminEmailFromReq(req)
+    if (!email) {
       return res.status(401).json({ ok: false })
     }
-    res.json({ ok: true, email: req.session.adminEmail })
+    res.json({ ok: true, email })
   })
 
   app.post('/api/applications', requireHiringOpen, async (req, res) => {

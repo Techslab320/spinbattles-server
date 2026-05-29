@@ -6,6 +6,7 @@ import {
   hasAnyAdmin,
 } from '../../lib/mongoStore.js'
 import { isDbConnected, dbUnavailableMessage } from '../../lib/db.js'
+import { createAdminToken } from '../../lib/adminToken.js'
 import { readJsonBody, withApi } from '../../lib/vercelApi.js'
 
 async function handler(req, res) {
@@ -23,8 +24,9 @@ async function handler(req, res) {
   if (!admin || !verifyPassword(String(password || ''), admin.passwordHash)) {
     return res.status(401).json({ ok: false, message: 'Invalid email or password' })
   }
-  req.session.adminEmail = admin.email
-  return res.json({ ok: true, email: admin.email })
+  req.session = { adminEmail: admin.email }
+  const token = createAdminToken(admin.email)
+  return res.json({ ok: true, email: admin.email, token })
 }
 
 export default withApi(handler, { prepareDbFn: prepareDb })

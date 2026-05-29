@@ -6,7 +6,7 @@ async function handler(req, res) {
     return res.status(405).json({ ok: false, message: 'Method not allowed' })
   }
   if (!requireAdmin(req, res)) return
-  return res.json({ ok: true, email: req.session.adminEmail })
+  return res.json({ ok: true, email: req.adminEmail })
 }
 
 export default withApi(handler, { prepareDbFn: prepareDb })
