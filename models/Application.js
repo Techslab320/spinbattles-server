@@ -47,13 +47,17 @@ function resumeToApi(resume, { includeData = false } = {}) {
 }
 
 applicationSchema.methods.toApiShape = function toApiShape(includeSections = false, includeResumeData = false) {
+  const submittedAt = this.submittedAt
+    ? this.submittedAt.toISOString()
+    : this.createdAt?.toISOString?.() || new Date().toISOString()
+
   const base = {
     id: this.publicId,
     type: this.type,
     title: this.title,
     applicantName: this.applicantName,
     applicantEmail: this.applicantEmail,
-    submittedAt: this.submittedAt.toISOString(),
+    submittedAt,
   }
   const resume = resumeToApi(this.resume, { includeData: includeResumeData })
   if (includeSections) {

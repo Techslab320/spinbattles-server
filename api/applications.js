@@ -1,10 +1,74 @@
 import { randomUUID } from 'crypto'
 import { prepareDb } from '../app.js'
 import { isDbConnected, dbUnavailableMessage } from '../lib/db.js'
-import { createApplication, hasAnyAdmin, listApplications } from '../lib/mongoStore.js'
+import {
+  createApplication,
+  deleteApplicationByPublicId,
+  getApplicationByPublicId,
+  hasAnyAdmin,
+  listApplications,
+} from '../lib/mongoStore.js'
 import { APPLICATIONS_CLOSED_MSG, readJsonBody, requireAdmin, withApi } from '../lib/vercelApi.js'
 
+function parseApplicationsPath(req) {
+  let id = req.query?.id
+  if (Array.isArray(id)) id = id[0]
+
+  const raw = req.url || ''
+  const resumeMatch = raw.match(/applications\/([^/?]+)\/resume/)
+  const idMatch = raw.match(/applications\/([^/?]+)/)
+
+  if (resumeMatch?.[1]) {
+    return { id: resumeMatch[1], mode: 'resume' }
+  }
+  if (id && id !== '[id]') {
+    return { id: String(id), mode: 'detail' }
+  }
+  if (idMatch?.[1] && idMatch[1] !== '[id]') {
+    return { id: idMatch[1], mode: 'detail' }
+  }
+  return { id: null, mode: 'list' }
+}
+
 async function handler(req, res) {
+  const { id, mode } = parseApplicationsPath(req)
+
+  if (mode === 'resume' && req.method === 'GET') {
+    if (!isDbConnected()) {
+      return res.status(503).json({ ok: false, message: dbUnavailableMessage() })
+    }
+    if (!requireAdmin(req, res)) return
+
+    const application = await getApplicationByPublicId(id, { includeResumeData: true })
+    if (!application?.resume?.data) {
+      return res.status(404).json({ ok: false, message: 'No resume file for this application' })
+    }
+    return res.json({ ok: true, resume: application.resume })
+  }
+
+  if (mode === 'detail' && id) {
+    if (!isDbConnected()) {
+      return res.status(503).json({ ok: false, message: dbUnavailableMessage() })
+    }
+    if (!requireAdmin(req, res)) return
+
+    if (req.method === 'GET') {
+      const application = await getApplicationByPublicId(id, { includeResumeData: false })
+      if (!application) {
+        return res.status(404).json({ ok: false, message: 'Not found' })
+      }
+      return res.json({ ok: true, application })
+    }
+
+    if (req.method === 'DELETE') {
+      const removed = await deleteApplicationByPublicId(id)
+      if (!removed) return res.status(404).json({ ok: false, message: 'Not found' })
+      return res.json({ ok: true })
+    }
+
+    return res.status(405).json({ ok: false, message: 'Method not allowed' })
+  }
+
   if (req.method === 'GET') {
     if (!isDbConnected()) {
       return res.status(503).json({ ok: false, message: dbUnavailableMessage() })
