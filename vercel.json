@@ -6,12 +6,14 @@
     { "src": "api/index.js", "use": "@vercel/node" },
     { "src": "api/applications.js", "use": "@vercel/node" },
     { "src": "api/applications/[id].js", "use": "@vercel/node" },
+    { "src": "api/applications/resume.js", "use": "@vercel/node" },
     { "src": "api/auth/login.js", "use": "@vercel/node" },
     { "src": "api/auth/logout.js", "use": "@vercel/node" },
     { "src": "api/auth/me.js", "use": "@vercel/node" }
   ],
   "routes": [
     { "src": "/api/health", "dest": "api/health.js" },
+    { "src": "/api/applications/([^/]+)/resume", "dest": "api/applications/resume.js?id=$1" },
     { "src": "/api/applications/([^/]+)", "dest": "api/applications/[id].js?id=$1" },
     { "src": "/api/applications", "dest": "api/applications.js" },
     { "src": "/api/auth/login", "dest": "api/auth/login.js" },

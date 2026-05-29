@@ -227,12 +227,25 @@ export function createApp() {
 
   app.get('/api/applications/:id', requireDb, requireAdmin, async (req, res) => {
     try {
-      const application = await getApplicationByPublicId(req.params.id)
+      const application = await getApplicationByPublicId(req.params.id, { includeResumeData: false })
       if (!application) return res.status(404).json({ ok: false, message: 'Not found' })
       res.json({ ok: true, application })
     } catch (err) {
       console.error('[applications GET :id]', err)
       res.status(500).json({ ok: false, message: 'Failed to load application' })
+    }
+  })
+
+  app.get('/api/applications/:id/resume', requireDb, requireAdmin, async (req, res) => {
+    try {
+      const application = await getApplicationByPublicId(req.params.id, { includeResumeData: true })
+      if (!application?.resume?.data) {
+        return res.status(404).json({ ok: false, message: 'No resume file for this application' })
+      }
+      res.json({ ok: true, resume: application.resume })
+    } catch (err) {
+      console.error('[applications GET :id/resume]', err)
+      res.status(500).json({ ok: false, message: 'Failed to load resume' })
     }
   })
 
