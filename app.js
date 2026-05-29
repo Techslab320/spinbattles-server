@@ -103,7 +103,9 @@ export function createApp() {
       maxAge: 7 * 24 * 60 * 60 * 1000,
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL),
+      secure:
+        !(process.env.CLIENT_ORIGIN || '').includes('localhost') &&
+        (process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL)),
     })
   )
 
