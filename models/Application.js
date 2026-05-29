@@ -8,7 +8,7 @@ const sectionSchema = new mongoose.Schema(
   { _id: false }
 )
 
-const resumeSchema = new mongoose.Schema(
+const fileBlobSchema = new mongoose.Schema(
   {
     fileName: { type: String, required: true },
     mimeType: { type: String, required: true },
@@ -26,22 +26,23 @@ const applicationSchema = new mongoose.Schema(
     applicantName: { type: String, required: true },
     applicantEmail: { type: String, required: true },
     sections: [sectionSchema],
-    resume: resumeSchema,
+    resume: fileBlobSchema,
+    avatar: fileBlobSchema,
     submittedAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 )
 
-function resumeToApi(resume, { includeData = false } = {}) {
-  if (!resume?.fileName) return null
+function fileBlobToApi(blob, { includeData = false } = {}) {
+  if (!blob?.fileName) return null
   const base = {
-    fileName: resume.fileName,
-    mimeType: resume.mimeType,
-    size: resume.size,
-    hasFile: Boolean(resume.data?.length),
+    fileName: blob.fileName,
+    mimeType: blob.mimeType,
+    size: blob.size,
+    hasFile: Boolean(blob.data?.length),
   }
-  if (includeData && resume.data?.length) {
-    return { ...base, data: resume.data.toString('base64') }
+  if (includeData && blob.data?.length) {
+    return { ...base, data: blob.data.toString('base64') }
   }
   return base
 }
@@ -59,12 +60,14 @@ applicationSchema.methods.toApiShape = function toApiShape(includeSections = fal
     applicantEmail: this.applicantEmail,
     submittedAt,
   }
-  const resume = resumeToApi(this.resume, { includeData: includeResumeData })
+  const resume = fileBlobToApi(this.resume, { includeData: includeResumeData })
+  const avatar = fileBlobToApi(this.avatar, { includeData: includeSections })
   if (includeSections) {
     return {
       ...base,
       sections: this.sections,
       ...(resume ? { resume } : {}),
+      ...(avatar ? { avatar } : {}),
     }
   }
   if (resume && !includeResumeData) {

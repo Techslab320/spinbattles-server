@@ -87,7 +87,7 @@ async function handler(req, res) {
     }
 
     const body = await readJsonBody(req)
-    const { type, title, applicantName, applicantEmail, sections, resume } = body || {}
+    const { type, title, applicantName, applicantEmail, sections, resume, avatar } = body || {}
     if (!type || !applicantName?.trim() || !applicantEmail?.trim()) {
       return res.status(400).json({ ok: false, message: 'Missing required application fields' })
     }
@@ -100,6 +100,7 @@ async function handler(req, res) {
       applicantEmail: String(applicantEmail).trim(),
       sections: Array.isArray(sections) ? sections : [],
       resume: resume || undefined,
+      avatar: avatar || undefined,
       submittedAt: new Date().toISOString(),
     })
 

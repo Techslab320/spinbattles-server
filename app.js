@@ -207,7 +207,7 @@ export function createApp() {
 
   app.post('/api/applications', requireHiringOpen, async (req, res) => {
     try {
-      const { type, title, applicantName, applicantEmail, sections, resume } = req.body || {}
+      const { type, title, applicantName, applicantEmail, sections, resume, avatar } = req.body || {}
       if (!type || !applicantName?.trim() || !applicantEmail?.trim()) {
         return res.status(400).json({ ok: false, message: 'Missing required application fields' })
       }
@@ -220,6 +220,7 @@ export function createApp() {
         applicantEmail: String(applicantEmail).trim(),
         sections: Array.isArray(sections) ? sections : [],
         resume: resume || undefined,
+        avatar: avatar || undefined,
         submittedAt: new Date().toISOString(),
       })
 
