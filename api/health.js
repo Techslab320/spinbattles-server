@@ -1,26 +1,6 @@
 import { connectDb, isDbConnected, dbUnavailableMessage } from '../lib/db.js'
 import { ensureDefaultAdmin, hasAnyAdmin } from '../lib/mongoStore.js'
-
-function applyCors(req, res) {
-  const origin = req.headers.origin
-  const allowed = new Set(
-    [process.env.CLIENT_ORIGIN, ...(process.env.CLIENT_ORIGINS || '').split(',')]
-      .map((s) => s?.trim())
-      .filter(Boolean)
-  )
-  if (process.env.VERCEL_URL) allowed.add(`https://${process.env.VERCEL_URL}`)
-  if (
-    origin &&
-    (allowed.has(origin) || /\.vercel\.app$/i.test(origin) || origin.includes('localhost'))
-  ) {
-    res.setHeader('Access-Control-Allow-Origin', origin)
-  } else if (process.env.CLIENT_ORIGIN) {
-    res.setHeader('Access-Control-Allow-Origin', process.env.CLIENT_ORIGIN)
-  }
-  res.setHeader('Access-Control-Allow-Credentials', 'true')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS')
-}
+import { applyCors } from '../lib/vercelApi.js'
 
 export default async function handler(req, res) {
   applyCors(req, res)

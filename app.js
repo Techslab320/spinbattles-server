@@ -37,7 +37,12 @@ function resolveCorsOrigin(req, res) {
       : `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`)
   }
 
-  if (origin && (allowed.has(origin) || /\.vercel\.app$/i.test(origin))) {
+  if (
+    origin &&
+    (allowed.has(origin) ||
+      /\.vercel\.app$/i.test(origin) ||
+      /^https?:\/\/([a-z0-9-]+\.)*spinbattles\.com(:\d+)?$/i.test(origin))
+  ) {
     res.setHeader('Access-Control-Allow-Origin', origin)
   } else if (process.env.CLIENT_ORIGIN) {
     res.setHeader('Access-Control-Allow-Origin', process.env.CLIENT_ORIGIN)
