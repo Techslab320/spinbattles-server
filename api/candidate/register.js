@@ -1,7 +1,8 @@
 import { prepareDb } from '../../app.js'
-import { createCandidate } from '../../lib/mongoStore.js'
+import { createCandidate, setCandidateOtp } from '../../lib/mongoStore.js'
 import { isDbConnected, dbUnavailableMessage } from '../../lib/db.js'
-import { createCandidateToken } from '../../lib/candidateToken.js'
+import { generateOtp } from '../../lib/otp.js'
+import { sendOtpEmail } from '../../lib/sendEmail.js'
 import { readJsonBody, withApi } from '../../lib/vercelApi.js'
 
 async function handler(req, res) {
@@ -23,16 +24,22 @@ async function handler(req, res) {
 
   try {
     const user = await createCandidate({ email, password, firstName, lastName })
-    req.session = {
-      candidateEmail: user.email,
-      candidateFirstName: user.firstName,
-      candidateLastName: user.lastName,
-    }
-    const token = createCandidateToken(user)
-    return res.status(201).json({ ok: true, ...user, token })
+    const otp = generateOtp()
+    await setCandidateOtp(user.email, otp)
+    await sendOtpEmail({ to: user.email, firstName: user.firstName, otp })
+
+    return res.status(201).json({
+      ok: true,
+      requiresVerification: true,
+      email: user.email,
+      message: 'Verification code sent to your email.',
+    })
   } catch (err) {
     if (err.message?.includes('already exists') || err.code === 11000) {
       return res.status(409).json({ ok: false, message: 'An account with this email already exists' })
+    }
+    if (err.message?.includes('Email service is not configured')) {
+      return res.status(503).json({ ok: false, message: err.message })
     }
     throw err
   }

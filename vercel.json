@@ -11,7 +11,9 @@
     { "src": "api/candidate/register.js", "use": "@vercel/node" },
     { "src": "api/candidate/login.js", "use": "@vercel/node" },
     { "src": "api/candidate/logout.js", "use": "@vercel/node" },
-    { "src": "api/candidate/me.js", "use": "@vercel/node" }
+    { "src": "api/candidate/me.js", "use": "@vercel/node" },
+    { "src": "api/candidate/verify-otp.js", "use": "@vercel/node" },
+    { "src": "api/candidate/resend-otp.js", "use": "@vercel/node" }
   ],
   "routes": [
     { "src": "/api/health", "dest": "api/health.js" },
@@ -25,6 +27,8 @@
     { "src": "/api/candidate/login", "dest": "api/candidate/login.js" },
     { "src": "/api/candidate/logout", "dest": "api/candidate/logout.js" },
     { "src": "/api/candidate/me", "dest": "api/candidate/me.js" },
+    { "src": "/api/candidate/verify-otp", "dest": "api/candidate/verify-otp.js" },
+    { "src": "/api/candidate/resend-otp", "dest": "api/candidate/resend-otp.js" },
     { "src": "/api", "dest": "api/index.js" }
   ]
 }

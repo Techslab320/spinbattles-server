@@ -6,6 +6,9 @@ const candidateSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true },
     firstName: { type: String, required: true, trim: true },
     lastName: { type: String, required: true, trim: true },
+    emailVerified: { type: Boolean, default: false },
+    otpHash: { type: String },
+    otpExpiresAt: { type: Date },
   },
   { timestamps: true }
 )

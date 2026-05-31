@@ -19,6 +19,14 @@ async function handler(req, res) {
   if (!candidate || !verifyPassword(String(password || ''), candidate.passwordHash)) {
     return res.status(401).json({ ok: false, message: 'Invalid email or password' })
   }
+  if (candidate.emailVerified === false) {
+    return res.status(403).json({
+      ok: false,
+      requiresVerification: true,
+      email: candidate.email,
+      message: 'Please verify your email with the OTP code we sent you.',
+    })
+  }
 
   const user = {
     email: candidate.email,

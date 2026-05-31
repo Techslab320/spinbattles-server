@@ -7,6 +7,8 @@ import { removeLegacyDbFile } from './lib/removeLegacyDb.js'
 import { createAdminToken, readBearerToken, verifyAdminToken } from './lib/adminToken.js'
 import { createCandidateToken, verifyCandidateToken } from './lib/candidateToken.js'
 import { verifyPassword } from './lib/password.js'
+import { generateOtp } from './lib/otp.js'
+import { sendOtpEmail } from './lib/sendEmail.js'
 import {
   createApplication,
   createCandidate,
@@ -17,6 +19,8 @@ import {
   getAdminByEmail,
   getApplicationByPublicId,
   listApplications,
+  setCandidateOtp,
+  verifyCandidateOtp,
 } from './lib/mongoStore.js'
 
 dotenv.config()
@@ -202,19 +206,81 @@ export function createApp() {
       }
 
       const user = await createCandidate({ email, password, firstName, lastName })
-      req.session = {
-        candidateEmail: user.email,
-        candidateFirstName: user.firstName,
-        candidateLastName: user.lastName,
-      }
-      const token = createCandidateToken(user)
-      res.status(201).json({ ok: true, ...user, token })
+      const otp = generateOtp()
+      await setCandidateOtp(user.email, otp)
+      await sendOtpEmail({ to: user.email, firstName: user.firstName, otp })
+
+      res.status(201).json({
+        ok: true,
+        requiresVerification: true,
+        email: user.email,
+        message: 'Verification code sent to your email.',
+      })
     } catch (err) {
-      if (err.message?.includes('already exists')) {
-        return res.status(409).json({ ok: false, message: err.message })
+      if (err.message?.includes('already exists') || err.code === 11000) {
+        return res.status(409).json({ ok: false, message: 'An account with this email already exists' })
+      }
+      if (err.message?.includes('Email service is not configured')) {
+        return res.status(503).json({ ok: false, message: err.message })
       }
       console.error('[candidate/register]', err)
       res.status(500).json({ ok: false, message: 'Registration failed' })
+    }
+  })
+
+  app.post('/api/candidate/verify-otp', requireDb, async (req, res) => {
+    try {
+      const { email, otp } = req.body || {}
+      if (!email?.trim() || !otp?.trim()) {
+        return res.status(400).json({ ok: false, message: 'Email and verification code are required' })
+      }
+      const result = await verifyCandidateOtp(email.trim(), String(otp).trim())
+      if (!result.ok) {
+        const messages = {
+          not_found: 'Account not found. Please sign up first.',
+          no_otp: 'No verification code found. Please request a new code.',
+          expired: 'Verification code expired. Please request a new code.',
+          invalid: 'Invalid verification code. Please try again.',
+        }
+        return res.status(400).json({
+          ok: false,
+          message: messages[result.reason] || 'Verification failed',
+        })
+      }
+      res.json({
+        ok: true,
+        verified: true,
+        message: 'Email verified successfully. You can sign in now.',
+      })
+    } catch (err) {
+      console.error('[candidate/verify-otp]', err)
+      res.status(500).json({ ok: false, message: 'Verification failed' })
+    }
+  })
+
+  app.post('/api/candidate/resend-otp', requireDb, async (req, res) => {
+    try {
+      const { email } = req.body || {}
+      if (!email?.trim()) {
+        return res.status(400).json({ ok: false, message: 'Email is required' })
+      }
+      const candidate = await getCandidateByEmail(email.trim())
+      if (!candidate) {
+        return res.json({ ok: true, message: 'If an account exists, a new code was sent.' })
+      }
+      if (candidate.emailVerified) {
+        return res.status(400).json({ ok: false, message: 'This email is already verified. Please sign in.' })
+      }
+      const otp = generateOtp()
+      await setCandidateOtp(candidate.email, otp)
+      await sendOtpEmail({ to: candidate.email, firstName: candidate.firstName, otp })
+      res.json({ ok: true, message: 'Verification code sent to your email.' })
+    } catch (err) {
+      if (err.message?.includes('Email service is not configured')) {
+        return res.status(503).json({ ok: false, message: err.message })
+      }
+      console.error('[candidate/resend-otp]', err)
+      res.status(500).json({ ok: false, message: 'Failed to resend code' })
     }
   })
 
@@ -224,6 +290,14 @@ export function createApp() {
       const candidate = await getCandidateByEmail(email)
       if (!candidate || !verifyPassword(String(password || ''), candidate.passwordHash)) {
         return res.status(401).json({ ok: false, message: 'Invalid email or password' })
+      }
+      if (candidate.emailVerified === false) {
+        return res.status(403).json({
+          ok: false,
+          requiresVerification: true,
+          email: candidate.email,
+          message: 'Please verify your email with the OTP code we sent you.',
+        })
       }
       const user = {
         email: candidate.email,
