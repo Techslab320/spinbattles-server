@@ -5,11 +5,14 @@ import dotenv from 'dotenv'
 import { connectDb, dbUnavailableMessage, isDbConnected } from './lib/db.js'
 import { removeLegacyDbFile } from './lib/removeLegacyDb.js'
 import { createAdminToken, readBearerToken, verifyAdminToken } from './lib/adminToken.js'
+import { createCandidateToken, verifyCandidateToken } from './lib/candidateToken.js'
 import { verifyPassword } from './lib/password.js'
 import {
   createApplication,
+  createCandidate,
   deleteApplicationByPublicId,
   ensureDefaultAdmin,
+  getCandidateByEmail,
   hasAnyAdmin,
   getAdminByEmail,
   getApplicationByPublicId,
@@ -170,6 +173,89 @@ export function createApp() {
         message: err.message || dbUnavailableMessage(),
       })
     }
+  })
+
+  function getCandidateFromReq(req) {
+    const bearer = readBearerToken(req)
+    if (bearer) {
+      const fromToken = verifyCandidateToken(bearer)
+      if (fromToken) return fromToken
+    }
+    if (req.session?.candidateEmail) {
+      return {
+        email: req.session.candidateEmail,
+        firstName: req.session.candidateFirstName || '',
+        lastName: req.session.candidateLastName || '',
+      }
+    }
+    return null
+  }
+
+  app.post('/api/candidate/register', requireDb, async (req, res) => {
+    try {
+      const { email, password, firstName, lastName } = req.body || {}
+      if (!email?.trim() || !password || !firstName?.trim() || !lastName?.trim()) {
+        return res.status(400).json({ ok: false, message: 'All fields are required' })
+      }
+      if (String(password).length < 8) {
+        return res.status(400).json({ ok: false, message: 'Password must be at least 8 characters' })
+      }
+
+      const user = await createCandidate({ email, password, firstName, lastName })
+      req.session = {
+        candidateEmail: user.email,
+        candidateFirstName: user.firstName,
+        candidateLastName: user.lastName,
+      }
+      const token = createCandidateToken(user)
+      res.status(201).json({ ok: true, ...user, token })
+    } catch (err) {
+      if (err.message?.includes('already exists')) {
+        return res.status(409).json({ ok: false, message: err.message })
+      }
+      console.error('[candidate/register]', err)
+      res.status(500).json({ ok: false, message: 'Registration failed' })
+    }
+  })
+
+  app.post('/api/candidate/login', requireDb, async (req, res) => {
+    try {
+      const { email, password } = req.body || {}
+      const candidate = await getCandidateByEmail(email)
+      if (!candidate || !verifyPassword(String(password || ''), candidate.passwordHash)) {
+        return res.status(401).json({ ok: false, message: 'Invalid email or password' })
+      }
+      const user = {
+        email: candidate.email,
+        firstName: candidate.firstName,
+        lastName: candidate.lastName,
+      }
+      req.session = {
+        candidateEmail: user.email,
+        candidateFirstName: user.firstName,
+        candidateLastName: user.lastName,
+      }
+      const token = createCandidateToken(user)
+      res.json({ ok: true, ...user, token })
+    } catch (err) {
+      console.error('[candidate/login]', err)
+      res.status(500).json({ ok: false, message: 'Login failed' })
+    }
+  })
+
+  app.post('/api/candidate/logout', (req, res) => {
+    if (req.session?.candidateEmail) {
+      req.session = req.session.adminEmail ? { adminEmail: req.session.adminEmail } : null
+    }
+    res.json({ ok: true })
+  })
+
+  app.get('/api/candidate/me', (req, res) => {
+    const user = getCandidateFromReq(req)
+    if (!user) {
+      return res.status(401).json({ ok: false })
+    }
+    res.json({ ok: true, ...user })
   })
 
   app.post('/api/auth/login', requireDb, async (req, res) => {

@@ -7,7 +7,11 @@
     { "src": "api/applications.js", "use": "@vercel/node" },
     { "src": "api/auth/login.js", "use": "@vercel/node" },
     { "src": "api/auth/logout.js", "use": "@vercel/node" },
-    { "src": "api/auth/me.js", "use": "@vercel/node" }
+    { "src": "api/auth/me.js", "use": "@vercel/node" },
+    { "src": "api/candidate/register.js", "use": "@vercel/node" },
+    { "src": "api/candidate/login.js", "use": "@vercel/node" },
+    { "src": "api/candidate/logout.js", "use": "@vercel/node" },
+    { "src": "api/candidate/me.js", "use": "@vercel/node" }
   ],
   "routes": [
     { "src": "/api/health", "dest": "api/health.js" },
@@ -17,6 +21,10 @@
     { "src": "/api/auth/login", "dest": "api/auth/login.js" },
     { "src": "/api/auth/logout", "dest": "api/auth/logout.js" },
     { "src": "/api/auth/me", "dest": "api/auth/me.js" },
+    { "src": "/api/candidate/register", "dest": "api/candidate/register.js" },
+    { "src": "/api/candidate/login", "dest": "api/candidate/login.js" },
+    { "src": "/api/candidate/logout", "dest": "api/candidate/logout.js" },
+    { "src": "/api/candidate/me", "dest": "api/candidate/me.js" },
     { "src": "/api", "dest": "api/index.js" }
   ]
 }
